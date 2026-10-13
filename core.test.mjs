@@ -60,6 +60,13 @@ test('initial start excludes history',async()=>{
   await scanFeed(state,a+'/transactions',async()=>({items:[raw()],next_page_params:null}),0n,watched,now+10);
   assert.equal(Object.keys(state.pending).length,0);
 });
+test('pending transactions do not block the feed and are picked up after confirmation',async()=>{
+  const state=initialState(now-10000), id=a+'/transactions';
+  await scanFeed(state,id,async()=>({items:[raw({timestamp:null,block_number:null,status:null})],next_page_params:null}),0n,watched,now);
+  assert.equal(Object.keys(state.pending).length,0);
+  await scanFeed(state,id,async()=>({items:[raw()],next_page_params:null}),0n,watched,now+1000);
+  assert.equal(Object.keys(state.pending).length,1);
+});
 test('receipt must succeed, have twelve subsequent blocks, and match canonical block',()=>{
   const receipt={status:'0x1',blockNumber:'0x64',blockHash:hash},block={hash};
   assert.equal(confirmed(receipt,112,block),true);

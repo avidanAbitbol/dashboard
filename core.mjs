@@ -49,6 +49,9 @@ export async function scanFeed(state,id,load,threshold,watched,now,maxPages=3) {
     if(!Array.isArray(result.items)) throw Error('Invalid explorer response');
     let oldest=Infinity;
     for(const raw of result.items) {
+      // Pending transactions have no block or timestamp yet. Revisit from the
+      // head on the next scan; only confirmed transfers can trigger alerts.
+      if(raw.block_number==null && raw.timestamp==null) continue;
       const timestamp=Date.parse(raw.timestamp);
       if(!Number.isFinite(timestamp)) throw Error('Invalid explorer timestamp');
       oldest=Math.min(oldest,timestamp);
