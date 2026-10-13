@@ -33,7 +33,7 @@ test('full mocked run initializes, groups two feeds, sends and encrypts checkpoi
  try {
   assert.equal(result.status,0,result.stderr);
   const messages=(await readFile(join(dir,'sends.jsonl'),'utf8')).trim().split('\n').map(JSON.parse);
-  assert.equal(messages.length,2); assert.match(messages[1].text,/10001 CENT/);
+  assert.equal(messages.length,2); assert.match(messages[1].text,/10,001 CENT/);
   const state=unseal(await readFile(join(dir,'state.enc')),key);
   assert.equal(Object.keys(state.sent).length,1); assert.equal(Object.keys(state.pending).length,0);
  } finally {await rm(dir,{recursive:true,force:true});}

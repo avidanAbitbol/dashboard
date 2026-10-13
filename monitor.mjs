@@ -1,10 +1,23 @@
 import {readFile,writeFile,rename} from 'node:fs/promises';
 import {execFileSync} from 'node:child_process';
 import {wei,cent,wallets,seal,unseal,initialState,scanFeed,confirmed} from './core.mjs';
+import {alertText} from './alerts.mjs';
 
 const env=process.env, explorer='https://explorer.incentiv.io', rpcUrl='https://rpc.incentiv.io';
 let stage='configuration';
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const nameCache=new Map();
+async function lookupName(address) {
+  if(!/^0x[0-9a-f]{40}$/.test(address)) return '';
+  if(!nameCache.has(address)) nameCache.set(address,(async()=>{
+    try {
+      const response=await fetch(`${explorer}/api/v2/addresses/${address}`,{signal:AbortSignal.timeout(5000)});
+      if(!response.ok) return '';
+      const data=await response.json(); return data.name||data.ens_domain_name||'';
+    } catch {return '';}
+  })());
+  return nameCache.get(address);
+}
 // Never log fetch errors: Telegram request URLs contain credentials.
 async function json(url,options={},attempts=3) {
   for(let attempt=0;attempt<attempts;attempt++) {
@@ -105,8 +118,7 @@ async function main() {
         if(!receipt || head-Number(BigInt(receipt.blockNumber))<12) continue;
         const block=await rpc('eth_getBlockByNumber',[receipt.blockNumber,false]);
         if(!confirmed(receipt,head,block)) continue;
-        const lines=events.slice(0,4).map(e=>`${cent(e.value)} CENT\nמאת: ${e.from}\nאל: ${e.to}`);
-        await telegram(`העברת CENT מעל הסף\n\n${lines.join('\n\n')}\n\n${events.length>4?'העברות נוספות באותה עסקה מופיעות בסייר.\n':''}${explorer}/tx/${hash}`);
+        await telegram(await alertText(hash,events,watched,lookupName));
         state.sent[hash]=Math.max(...events.map(e=>e.time)); delete state.pending[hash];
         sent++; await save(state); await sleep(1100);
       } catch {errors++; break;}
