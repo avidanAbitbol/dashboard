@@ -1,0 +1,7 @@
+state.enc
+state.zip
+.env*
+wallets.txt
+node_modules/
+.cent-test-*/
+state.enc.tmp

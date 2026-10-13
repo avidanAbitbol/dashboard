@@ -1,0 +1,1 @@
+{"name":"cent-telegram-monitor","private":true,"type":"module","scripts":{"test":"node --test","start":"node monitor.mjs"},"engines":{"node":">=22"}}
