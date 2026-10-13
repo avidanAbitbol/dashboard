@@ -1,0 +1,52 @@
+name: CENT Telegram monitor
+on:
+  schedule:
+    - cron: '2-57/5 * * * *'
+  workflow_dispatch:
+    inputs:
+      initialize:
+        description: 'First start only: create a new baseline if saved state is absent'
+        type: boolean
+        default: false
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: cent-monitor
+  cancel-in-progress: false
+jobs:
+  monitor:
+    if: >-
+      github.event.repository.private == false &&
+      github.ref_name == github.event.repository.default_branch &&
+      vars.ENABLE_MONITOR == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+      - run: node --test
+      - name: Monitor
+        run: node monitor.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          INITIALIZE: ${{ inputs.initialize || false }}
+          CENT_THRESHOLD: ${{ vars.CENT_THRESHOLD || '10000' }}
+          WATCHED_WALLETS: ${{ secrets.WATCHED_WALLETS }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          STATE_KEY: ${{ secrets.STATE_KEY }}
+      - name: Preserve encrypted progress even after a partial failure
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: cent-state
+          path: state.enc
+          if-no-files-found: ignore
+          retention-days: 1
+          compression-level: 0
